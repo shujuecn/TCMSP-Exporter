@@ -31,14 +31,16 @@
 
 ## 使用方法
 ### 1. 安装 Tampermonkey
-请先在浏览器安装 Tampermonkey 扩展。
+请先在浏览器安装 [Tampermonkey](https://www.tampermonkey.net/) 扩展。
 
 ### 2. 导入脚本
-将仓库中的 `tcmsp-spider.user.js` 导入 Tampermonkey 并启用。
+
+- 访问 [TCMSP Exporter]( https://greasyfork.org/zh-CN/scripts/567363-tcmsp-exporter) 安装**（推荐）**。
+
+- 或将仓库中的 `tcmsp-spider.user.js` 导入 Tampermonkey 并启用。
 
 ### 3. 打开 TCMSP 页面
-访问：
-- [https://www.tcmsp-e.com/tcmspsearch.php](https://www.tcmsp-e.com/tcmspsearch.php)
+访问：[https://www.tcmsp-e.com/tcmspsearch.php](https://www.tcmsp-e.com/tcmspsearch.php)
 
 页面右侧会出现悬浮面板。
 
