@@ -1,8 +1,7 @@
 # TCMSP-Exporter
 
-## 重要说明（请先阅读）
-**本项目是旧项目 `TCMSP-Spider` 的新版替代实现。**  
-新版不再依赖本地 Python 环境，改为浏览器内运行的 Tampermonkey 油猴脚本，适配 TCMSP 当前页面结构与接口变化。
+## ⚠️ 重要说明（请先阅读）
+**本项目是旧项目 `TCMSP-Spider` 的新版替代实现。** 新版不再依赖本地 Python 环境，改为浏览器内运行的 Tampermonkey 油猴脚本，适配 TCMSP 当前页面结构与接口变化。
 
 - 旧项目仓库：[TCMSP-Spider](https://github.com/shujuecn/TCMSP-Spider)
 - 新项目仓库：[TCMSP-Exporter](https://github.com/shujuecn/TCMSP-Exporter)
@@ -10,7 +9,8 @@
 ---
 
 ## 项目简介
-`TCMSP-Exporter` 是一个运行在浏览器中的 TCMSP 数据导出工具。  
+`TCMSP-Exporter` 是一个运行在浏览器中的 TCMSP 数据导出工具。
+
 在 TCMSP 页面输入药物名（支持批量，每行一个）后，可自动抓取：
 
 - Ingredients（成分）
@@ -41,7 +41,6 @@
 
 ### 3. 打开 TCMSP 页面
 访问：[https://www.tcmsp-e.com/tcmspsearch.php](https://www.tcmsp-e.com/tcmspsearch.php)
-
 页面右侧会出现悬浮面板。
 
 ### 4. 输入查询词并下载
@@ -68,3 +67,7 @@
 
 ## License
 MIT
+
+## Demo
+
+![](./demo.png)
