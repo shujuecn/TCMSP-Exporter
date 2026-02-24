@@ -7,6 +7,7 @@
 // @match        https://www.tcmsp-e.com/*
 // @match        https://tcmsp-e.com/*
 // @require      https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js
+// @license      MIT
 // @grant        none
 // ==/UserScript==
 
