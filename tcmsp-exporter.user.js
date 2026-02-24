@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TCMSP Exporter
 // @namespace    https://github.com/shujuecn/TCMSP-Exporter
-// @version      1.3.0
+// @version      1.4.0
 // @description  TCMSP-Exporter 批量抓取成分/靶点/疾病并导出 XLSX
 // @author       shujuecn + codex
 // @match        https://www.tcmsp-e.com/*
@@ -507,10 +507,17 @@
     const keptKeys = new Set(
       filteredIngredients.map((row) => row?.[joinKey]).filter(Boolean),
     );
+    const diseaseHasJoinKey = diseases.some((row) => {
+      const value = row?.[joinKey];
+      return value !== undefined && value !== null && value !== "";
+    });
     return {
       ingredients: filteredIngredients,
       targets: targets.filter((row) => keptKeys.has(row?.[joinKey])),
-      diseases: diseases.filter((row) => keptKeys.has(row?.[joinKey])),
+      // diseases: diseases.filter((row) => keptKeys.has(row?.[joinKey])),
+      diseases: diseaseHasJoinKey
+        ? diseases.filter((row) => keptKeys.has(row?.[joinKey]))
+        : diseases,
     };
   }
 
