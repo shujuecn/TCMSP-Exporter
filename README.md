@@ -23,11 +23,12 @@
 - 浏览器内运行：无需 Python、无需手动维护 token
 - 批量查询：支持多药物同时抓取（每行一个）
 - 合并导出：可选将多药物结果合并到同一表格，并附带标识列
+- 成分筛选：悬浮窗支持可勾选阈值筛选，默认 `OB (%) >= 30`、`DL >= 0.18`，且阈值可自定义
 - 多表导出：`summary` + `merged/ingredients/targets/diseases`
 - 悬浮窗交互：支持拖动、折叠/展开，状态自动记忆
 
 ## 文件说明
-- `tcmsp-spider.user.js`：油猴脚本主文件（可直接导入 Tampermonkey）
+- `tcmsp-exporter.user.js`：油猴脚本主文件（可直接导入 Tampermonkey）
 
 ## 使用方法
 ### 1. 安装 Tampermonkey
@@ -37,7 +38,7 @@
 
 - 访问 [TCMSP Exporter]( https://greasyfork.org/zh-CN/scripts/567363-tcmsp-exporter) 安装**（推荐）**。
 
-- 或将仓库中的 `tcmsp-spider.user.js` 导入 Tampermonkey 并启用。
+- 或将仓库中的 `tcmsp-exporter.user.js` 导入 Tampermonkey 并启用。
 
 ### 3. 打开 TCMSP 页面
 访问：[https://www.tcmsp-e.com/tcmspsearch.php](https://www.tcmsp-e.com/tcmspsearch.php)
@@ -45,9 +46,10 @@
 
 ### 4. 输入查询词并下载
 1. 在输入框中按“每行一个”输入药物名（中文/拼音/拉丁名均可）
-2. 按需勾选“合并多药物结果到同一表”
-3. 点击“抓取并下载 XLSX”
-4. 等待抓取完成，浏览器自动下载 Excel 文件
+2. 按需勾选并调整筛选条件（`OB (%)`、`DL` 阈值）
+3. 按需勾选“合并多药物结果到同一表”
+4. 点击“抓取并下载 XLSX”
+5. 等待抓取完成，浏览器自动下载 Excel 文件
 
 ## 导出结果说明
 导出的 `.xlsx` 至少包含以下工作表：

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TCMSP Exporter
 // @namespace    https://github.com/shujuecn/TCMSP-Exporter
-// @version      1.1.0
+// @version      1.3.0
 // @description  TCMSP-Exporter 批量抓取成分/靶点/疾病并导出 XLSX
 // @author       shujuecn + codex
 // @match        https://www.tcmsp-e.com/*
@@ -242,6 +242,7 @@
     herbIndex,
     totalHerbs,
     report,
+    filterOptions,
   ) {
     const herbEn = herb.herb_en_name || herb.herb_cn_name || "";
     report(`抓取详情 [${queryIndex}] ${herbIndex}/${totalHerbs}: ${herbEn}`);
@@ -254,7 +255,17 @@
     const ingredients = extractGridData(detailHtml, "grid");
     const targets = extractGridData(detailHtml, "grid2");
     const diseases = extractGridData(detailHtml, "grid3");
-    const merged = mergeDetailRows(ingredients, targets, diseases);
+    const filteredData = applyIngredientFilters(
+      ingredients,
+      targets,
+      diseases,
+      filterOptions,
+    );
+    const merged = mergeDetailRows(
+      filteredData.ingredients,
+      filteredData.targets,
+      filteredData.diseases,
+    );
 
     const herbCode = sanitizeName(
       `${herbMeta.herb_pinyin || herbMeta.herb_en_name || herbMeta.herb_cn_name || herbIndex}`,
@@ -272,18 +283,24 @@
     return {
       herb: herbMeta,
       counts: {
-        ingredients: ingredients.length,
-        targets: targets.length,
-        diseases: diseases.length,
+        ingredients: filteredData.ingredients.length,
+        targets: filteredData.targets.length,
+        diseases: filteredData.diseases.length,
       },
-      ingredientsRows: withMarkers(ingredients, marker),
-      targetsRows: withMarkers(targets, marker),
-      diseasesRows: withMarkers(diseases, marker),
+      ingredientsRows: withMarkers(filteredData.ingredients, marker),
+      targetsRows: withMarkers(filteredData.targets, marker),
+      diseasesRows: withMarkers(filteredData.diseases, marker),
       mergedRows: withMarkers(merged, marker),
     };
   }
 
-  async function processQuery(token, queryKeyword, queryIndex, report) {
+  async function processQuery(
+    token,
+    queryKeyword,
+    queryIndex,
+    report,
+    filterOptions,
+  ) {
     report(`检索药物 [${queryIndex}]: ${queryKeyword}`);
 
     const searchHtml = await fetchHtml(
@@ -313,6 +330,7 @@
         i + 1,
         herbs.length,
         report,
+        filterOptions,
       );
       herbResults.push(item);
     }
@@ -440,7 +458,62 @@
     );
   }
 
-  async function queryAndDownloadBatch(queryKeywords, mergeAll) {
+  function parseNumberish(value) {
+    const num = Number.parseFloat(String(value ?? "").trim());
+    return Number.isFinite(num) ? num : Number.NaN;
+  }
+
+  function applyIngredientFilters(
+    ingredients,
+    targets,
+    diseases,
+    filterOptions,
+  ) {
+    const obEnabled = Boolean(filterOptions?.obEnabled);
+    const dlEnabled = Boolean(filterOptions?.dlEnabled);
+    const obMin = Number.isFinite(filterOptions?.obMin)
+      ? filterOptions.obMin
+      : 30;
+    const dlMin = Number.isFinite(filterOptions?.dlMin)
+      ? filterOptions.dlMin
+      : 0.18;
+
+    if (!obEnabled && !dlEnabled) {
+      return { ingredients, targets, diseases };
+    }
+
+    const filteredIngredients = ingredients.filter((row) => {
+      if (obEnabled) {
+        const ob = parseNumberish(row?.ob);
+        if (!Number.isFinite(ob) || ob < obMin) return false;
+      }
+      if (dlEnabled) {
+        const dl = parseNumberish(row?.dl);
+        if (!Number.isFinite(dl) || dl < dlMin) return false;
+      }
+      return true;
+    });
+
+    const joinKey = chooseJoinKey(ingredients, targets, diseases);
+    if (!joinKey) {
+      return {
+        ingredients: filteredIngredients,
+        targets,
+        diseases,
+      };
+    }
+
+    const keptKeys = new Set(
+      filteredIngredients.map((row) => row?.[joinKey]).filter(Boolean),
+    );
+    return {
+      ingredients: filteredIngredients,
+      targets: targets.filter((row) => keptKeys.has(row?.[joinKey])),
+      diseases: diseases.filter((row) => keptKeys.has(row?.[joinKey])),
+    };
+  }
+
+  async function queryAndDownloadBatch(queryKeywords, mergeAll, filterOptions) {
     if (typeof XLSX === "undefined") {
       throw new Error("XLSX 库未加载，请刷新后重试");
     }
@@ -451,7 +524,8 @@
     const queryResults = await runWithConcurrency(
       queryKeywords,
       QUERY_CONCURRENCY,
-      async (query, idx) => processQuery(token, query, idx + 1, setStatus),
+      async (query, idx) =>
+        processQuery(token, query, idx + 1, setStatus, filterOptions),
     );
 
     const now = new Date().toISOString();
@@ -486,7 +560,7 @@
     style.textContent = `
       #${panelId}{
         position:fixed;right:16px;top:72px;z-index:999999;
-        width:420px;padding:10px 14px 14px;border-radius:12px;
+        width:370px;padding:10px 14px 14px;border-radius:12px;
         border:1px solid #d1d5db;background:#ffffff;box-shadow:0 10px 30px rgba(0,0,0,.14);
         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
         box-sizing:border-box;
@@ -507,6 +581,13 @@
       #${panelId} .tcmsp-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.16);}
       #${panelId} .tcmsp-options{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
       #${panelId} .tcmsp-check{font-size:12px;color:#374151;display:flex;align-items:center;gap:6px;user-select:none;}
+      #${panelId} .tcmsp-filters{margin-top:8px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#f9fafb;}
+      #${panelId} .tcmsp-filter-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+      #${panelId} .tcmsp-filter-row + .tcmsp-filter-row{margin-top:6px;}
+      #${panelId} .tcmsp-filter-num{
+        width:92px;height:28px;padding:0 8px;border-radius:8px;border:1px solid #cbd5e1;
+        font-size:12px;color:#111827;box-sizing:border-box;
+      }
       #${panelId} .tcmsp-btn{
         height:34px;padding:0 14px;border-radius:8px;border:1px solid #2563eb;
         background:#2563eb;color:#fff;font-size:12px;cursor:pointer;white-space:nowrap;
@@ -534,12 +615,22 @@
 麻黄
 Baizhu
 Citrus Reticulata"></textarea>
+        <div class="tcmsp-filters">
+          <div class="tcmsp-filter-row">
+            <label class="tcmsp-check"><input type="checkbox" class="tcmsp-ob-enabled" checked> OB (%) ≥</label>
+            <input class="tcmsp-filter-num tcmsp-ob-min" type="number" min="0" step="0.1" value="30">
+          </div>
+          <div class="tcmsp-filter-row">
+            <label class="tcmsp-check"><input type="checkbox" class="tcmsp-dl-enabled" checked> DL ≥</label>
+            <input class="tcmsp-filter-num tcmsp-dl-min" type="number" min="0" step="0.01" value="0.18">
+          </div>
+        </div>
         <div class="tcmsp-options">
-          <label class="tcmsp-check"><input type="checkbox" class="tcmsp-merge" checked> 合并多药物结果到同一表（含标识列）</label>
+          <label class="tcmsp-check"><input type="checkbox" class="tcmsp-merge" checked> 合并多药物结果到同一表</label>
           <button class="tcmsp-btn" type="button">抓取并下载 XLSX</button>
         </div>
         <div class="tcmsp-status">就绪</div>
-        <div class="tcmsp-tip">将下载一个 XLSX 文件：summary + merged/ingredients/targets/diseases（按合并选项输出）</div>
+        <div class="tcmsp-tip">将下载一个 XLSX 文件：summary + merged / ingredients / targets / diseases（按合并选项输出；可按 OB/DL 阈值筛选）</div>
       </div>
     `;
     document.body.appendChild(panel);
@@ -548,6 +639,10 @@ Citrus Reticulata"></textarea>
     const collapseBtn = panel.querySelector(".tcmsp-collapse");
     const input = panel.querySelector(".tcmsp-input");
     const mergeCheckbox = panel.querySelector(".tcmsp-merge");
+    const obEnabledCheckbox = panel.querySelector(".tcmsp-ob-enabled");
+    const dlEnabledCheckbox = panel.querySelector(".tcmsp-dl-enabled");
+    const obMinInput = panel.querySelector(".tcmsp-ob-min");
+    const dlMinInput = panel.querySelector(".tcmsp-dl-min");
     const button = panel.querySelector(".tcmsp-btn");
 
     function savePanelPos(left, top) {
@@ -623,7 +718,19 @@ Citrus Reticulata"></textarea>
 
       button.disabled = true;
       try {
-        await queryAndDownloadBatch(queries, Boolean(mergeCheckbox.checked));
+        const obMin = parseNumberish(obMinInput.value);
+        const dlMin = parseNumberish(dlMinInput.value);
+        const filterOptions = {
+          obEnabled: Boolean(obEnabledCheckbox.checked),
+          dlEnabled: Boolean(dlEnabledCheckbox.checked),
+          obMin: Number.isFinite(obMin) ? obMin : 30,
+          dlMin: Number.isFinite(dlMin) ? dlMin : 0.18,
+        };
+        await queryAndDownloadBatch(
+          queries,
+          Boolean(mergeCheckbox.checked),
+          filterOptions,
+        );
       } catch (err) {
         setStatus(`失败：${err?.message || err}`, true);
       } finally {
